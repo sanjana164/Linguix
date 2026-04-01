@@ -1,105 +1,576 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Linguix Translator</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Linguix &middot; Neural Translator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    body {
-      background: #0b0b1f;
-      color: white;
-      font-family: Arial;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    :root {
+      --bg:      #05050f;
+      --surface: #0d0d1f;
+      --surface2:#12122a;
+      --border:  #1e1e42;
+      --accent:  #7c6cfc;
+      --accent2: #fc6cc8;
+      --accent3: #6cfcca;
+      --text:    #e8e8ff;
+      --muted:   #6b6b9a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+    .orb { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.2; pointer-events: none; animation: drift 16s ease-in-out infinite alternate; }
+    .orb-1 { width:600px; height:600px; background:var(--accent);  top:-10%; left:-10%; }
+    .orb-2 { width:500px; height:500px; background:var(--accent2); bottom:-10%; right:-5%; animation-delay:-6s; }
+    @keyframes drift { from { transform: translate(0,0); } to { transform: translate(40px,30px); } }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 0 20px 60px; position: relative; }
+
+    header { text-align: center; padding: 40px 0 36px; }
+    .logo { font-size: 30px; font-weight: 800; letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff, var(--accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .sub  { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 2px; margin-top: 6px; }
+    .demo-badge {
+      display: inline-block; margin-top: 12px; padding: 5px 14px; border-radius: 20px;
+      background: rgba(252,108,200,0.1); border: 1px solid rgba(252,108,200,0.35);
+      font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent2);
     }
 
-    .container {
-      width: 600px;
-    }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.5); }
 
-    textarea {
-      width: 100%;
-      height: 120px;
-      margin-bottom: 10px;
-      padding: 10px;
-    }
+    .lang-bar { display: flex; align-items: center; gap: 12px; padding: 18px 24px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+    .lang-pick { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; position: relative; cursor: pointer; transition: border-color 0.2s; }
+    .lang-pick:hover { border-color: var(--accent); }
+    .lang-pick select { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; border: none; }
+    .lang-flag { font-size: 20px; }
+    .lang-name { font-weight: 600; font-size: 14px; }
 
-    select, button {
-      padding: 10px;
-      margin: 5px 0;
-      width: 100%;
-    }
+    .swap-btn { width: 42px; height: 42px; flex-shrink: 0; background: rgba(124,108,252,0.12); border: 1px solid rgba(124,108,252,0.3); border-radius: 10px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+    .swap-btn:hover { background: var(--accent); transform: rotate(180deg); }
 
-    .output {
-      background: #111;
-      padding: 15px;
-      min-height: 120px;
-      white-space: pre-line;
-    }
+    .panes { display: grid; grid-template-columns: 1fr 1px 1fr; min-height: 240px; }
+    .divider { background: var(--border); }
+    .pane { display: flex; flex-direction: column; }
+    .pane-label { padding: 14px 20px 0; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+
+    textarea { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: 'Syne', sans-serif; font-size: 16px; line-height: 1.7; padding: 12px 20px 16px; resize: none; min-height: 200px; }
+    textarea::placeholder { color: rgba(107,107,154,0.45); }
+
+    .output-box { flex: 1; padding: 12px 20px 16px; font-size: 16px; line-height: 1.7; min-height: 200px; background: rgba(124,108,252,0.02); }
+    .output-box.placeholder { color: var(--muted); font-style: italic; }
+
+    .shimmer { display: flex; flex-direction: column; gap: 12px; padding: 12px 20px; }
+    .shimmer span { height: 18px; border-radius: 6px; background: linear-gradient(90deg, rgba(124,108,252,0.06) 0%, rgba(124,108,252,0.18) 40%, rgba(124,108,252,0.06) 80%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+    .shimmer span:nth-child(2) { width:75%; animation-delay:.1s; }
+    .shimmer span:nth-child(3) { width:50%; animation-delay:.2s; }
+    @keyframes shimmer { from{background-position:200% center} to{background-position:-200% center} }
+
+    .pane-foot { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--border); }
+    .char-count { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+    .foot-btns  { display: flex; gap: 6px; }
+    .icon-btn { width:32px; height:32px; background:transparent; border: 1px solid var(--border); border-radius:7px; cursor:pointer; font-size:14px; color:var(--muted); display:flex; align-items:center; justify-content:center; transition: all 0.2s; }
+    .icon-btn:hover { border-color:var(--accent); color:var(--text); }
+
+    .action-bar { display: flex; align-items: center; gap: 20px; padding: 18px 24px; background: var(--surface2); border-top: 1px solid var(--border); }
+    .translate-btn { padding: 13px 32px; background: linear-gradient(135deg, var(--accent), #9b6cfc); border: none; border-radius: 12px; color: #fff; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 24px rgba(124,108,252,0.4); transition: all 0.25s; display: flex; align-items: center; gap: 8px; }
+    .translate-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(124,108,252,0.55); }
+    .translate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .spinner { display: none; width:16px; height:16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .stat-block { font-family:'DM Mono',monospace; font-size:12px; color:var(--muted); }
+    .stat-block b { color: var(--accent3); }
+
+    .error-bar { display: none; padding: 12px 20px; background: rgba(252,80,80,0.1); border-top: 1px solid rgba(252,80,80,0.25); color: #fc9090; font-size: 13px; }
+    .error-bar.show { display: block; }
+
+    .history { margin-top: 36px; }
+    .history h3 { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+    .hist-item { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+    .hist-item:hover { border-color: rgba(124,108,252,0.4); transform: translateX(4px); }
+    .hist-langs { font-family:'DM Mono',monospace; font-size:11px; color:var(--accent); margin-bottom:8px; }
+    .hist-row   { display: grid; grid-template-columns:1fr 1fr; gap:16px; font-size:14px; }
+    .hist-src   { color: var(--muted); }
+    .hist-tgt   { color: var(--text); }
+
+    @media(max-width:620px){ .panes { grid-template-columns:1fr; } .divider { height:1px; width:100%; } }
   </style>
 </head>
-
 <body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
 
-<div class="container">
-  <h2>🌐 Linguix Translator</h2>
+  <div class="container">
+    <header>
+      <div class="logo">&#127760; Linguix</div>
+      <div class="sub">NEURAL MACHINE TRANSLATION</div>
+      <div class="demo-badge" id="modeBadge">&#9889; Demo Mode &mdash; run python app.py then set DEMO_MODE = false</div>
+    </header>
 
-  <textarea id="text" placeholder="Type anything..."></textarea>
+    <div class="card">
+      <div class="lang-bar">
+        <div class="lang-pick">
+          <span class="lang-flag" id="srcFlag">&#127468;&#127463;</span>
+          <span class="lang-name" id="srcName">English</span>
+          <select id="srcLang">
+            <option value="en">English</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="es">Spanish</option>
+            <option value="it">Italian</option>
+            <option value="ru">Russian</option>
+            <option value="zh">Chinese</option>
+            <option value="ar">Arabic</option>
+            <option value="hi">Hindi</option>
+          </select>
+        </div>
 
-  <select id="src">
-    <option value="auto">Auto Detect</option>
-    <option value="en">English</option>
-    <option value="hi">Hindi</option>
-  </select>
+        <button class="swap-btn" id="swapBtn" title="Swap languages">&#8644;</button>
 
-  <select id="tgt">
-    <option value="hi">Hindi</option>
-    <option value="en">English</option>
-  </select>
+        <div class="lang-pick">
+          <span class="lang-flag" id="tgtFlag">&#127467;&#127479;</span>
+          <span class="lang-name" id="tgtName">French</span>
+          <select id="tgtLang">
+            <option value="en">English</option>
+            <option value="fr" selected>French</option>
+            <option value="de">German</option>
+            <option value="es">Spanish</option>
+            <option value="it">Italian</option>
+            <option value="ru">Russian</option>
+            <option value="zh">Chinese</option>
+            <option value="ar">Arabic</option>
+            <option value="hi">Hindi</option>
+          </select>
+        </div>
+      </div>
 
-  <button onclick="translate()">Translate</button>
+      <div class="panes">
+        <div class="pane">
+          <div class="pane-label">Source</div>
+          <textarea id="srcText" placeholder="Type to translate..." maxlength="500"></textarea>
+          <div class="pane-foot">
+            <span class="char-count" id="charCount">0 / 500</span>
+            <div class="foot-btns">
+              <button class="icon-btn" id="clearBtn"   title="Clear">&#10005;</button>
+              <button class="icon-btn" id="copySrcBtn" title="Copy">&#10697;</button>
+              <button class="icon-btn" id="speakSrc"   title="Speak">&#9711;</button>
+            </div>
+          </div>
+        </div>
 
-  <div class="output" id="output">Result will appear here...</div>
-</div>
+        <div class="divider"></div>
+
+        <div class="pane">
+          <div class="pane-label">Translation</div>
+          <div class="output-box placeholder" id="output">Translation appears here...</div>
+          <div class="pane-foot">
+            <span class="char-count" id="outCount">&#8212;</span>
+            <div class="foot-btns">
+              <button class="icon-btn" id="copyOutBtn" title="Copy">&#10697;</button>
+              <button class="icon-btn" id="speakOut"   title="Speak">&#9711;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="translate-btn" id="translateBtn">
+          <div class="spinner" id="spinner"></div>
+          <span id="btnText">&#10022; Translate</span>
+        </button>
+        <div class="stat-block" id="statBlock" style="display:none">
+          Time: <b id="statTime">-</b> &nbsp;|&nbsp; Model: <b id="statModel">-</b>
+        </div>
+      </div>
+
+      <div class="error-bar" id="errorBar"></div>
+    </div>
+
+    <div class="history" id="historySection" style="display:none">
+      <h3>Recent Translations</h3>
+      <div id="historyList"></div>
+    </div>
+  </div>
 
 <script>
-async function translate() {
-  const text = document.getElementById("text").value;
-  const src = document.getElementById("src").value;
-  const tgt = document.getElementById("tgt").value;
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+// Set DEMO_MODE = false when Flask backend (app.py) is running on port 5000
+var DEMO_MODE = false;
+var API_URL   = "http://localhost:5000/api/translate";
 
-  if (!text.trim()) return;
+// ── LANGUAGE METADATA ──────────────────────────────────────────────────────
+var LANG_META = {
+  en: { name: "English",    flag: "EN" },
+  fr: { name: "French",     flag: "FR" },
+  de: { name: "German",     flag: "DE" },
+  es: { name: "Spanish",    flag: "ES" },
+  it: { name: "Italian",    flag: "IT" },
+  ru: { name: "Russian",    flag: "RU" },
+  zh: { name: "Chinese",    flag: "ZH" },
+  ar: { name: "Arabic",     flag: "AR" },
+  hi: { name: "Hindi",      flag: "HI" }
+};
 
-  try {
-    const res = await fetch("http://localhost:5000/api/translate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        text: text,
-        src_lang: src,
-        tgt_lang: tgt
-      })
-    });
+// ── DEMO DICTIONARY (word-by-word substitution for offline preview) ────────
+// Note: no apostrophes inside string values to avoid JS syntax errors
+var DICT = {
+  "en-fr": {
+    hello:"bonjour", hi:"salut", good:"bon", morning:"matin", evening:"soir",
+    night:"nuit", bye:"au revoir", yes:"oui", no:"non",
+    please:"sil vous plait", thank:"merci", thanks:"merci", you:"vous",
+    welcome:"bienvenue", sorry:"desole", help:"aide", love:"amour",
+    water:"eau", food:"nourriture", house:"maison", car:"voiture",
+    dog:"chien", cat:"chat", day:"jour", time:"temps", man:"homme",
+    woman:"femme", child:"enfant", friend:"ami", work:"travail",
+    the:"le", a:"un", is:"est", are:"sont", i:"je", we:"nous",
+    they:"ils", my:"mon", your:"votre", and:"et", or:"ou", not:"pas",
+    this:"ceci", that:"ca", what:"quoi", where:"ou", when:"quand",
+    how:"comment", why:"pourquoi", who:"qui", very:"tres", big:"grand",
+    small:"petit", new:"nouveau", old:"vieux", happy:"heureux", sad:"triste",
+    beautiful:"beau", world:"monde", life:"vie", book:"livre",
+    music:"musique", end:"fin", city:"ville", sky:"ciel", sun:"soleil"
+  },
+  "en-de": {
+    hello:"hallo", hi:"hallo", good:"gut", morning:"morgen", evening:"abend",
+    night:"nacht", bye:"tschuss", yes:"ja", no:"nein",
+    please:"bitte", thank:"danke", thanks:"danke", you:"sie",
+    welcome:"willkommen", sorry:"entschuldigung", help:"hilfe", love:"liebe",
+    water:"wasser", food:"essen", house:"haus", car:"auto", dog:"hund",
+    cat:"katze", day:"tag", time:"zeit", man:"mann", woman:"frau",
+    child:"kind", friend:"freund", work:"arbeit", the:"der", a:"ein",
+    is:"ist", are:"sind", i:"ich", we:"wir", they:"sie", my:"mein",
+    your:"ihr", and:"und", or:"oder", not:"nicht", this:"dies", that:"das",
+    what:"was", where:"wo", when:"wann", how:"wie", why:"warum", who:"wer",
+    very:"sehr", big:"gross", small:"klein", new:"neu", old:"alt",
+    happy:"glucklich", sad:"traurig", world:"welt", life:"leben",
+    book:"buch", music:"musik", end:"ende", city:"stadt"
+  },
+  "en-es": {
+    hello:"hola", hi:"hola", good:"bueno", morning:"manana", evening:"tarde",
+    night:"noche", bye:"adios", yes:"si", no:"no",
+    please:"por favor", thank:"gracias", thanks:"gracias", you:"usted",
+    welcome:"bienvenido", sorry:"lo siento", help:"ayuda", love:"amor",
+    water:"agua", food:"comida", house:"casa", car:"coche", dog:"perro",
+    cat:"gato", day:"dia", time:"tiempo", man:"hombre", woman:"mujer",
+    child:"nino", friend:"amigo", work:"trabajo", the:"el", a:"un",
+    is:"es", are:"son", i:"yo", we:"nosotros", they:"ellos", my:"mi",
+    your:"su", and:"y", or:"o", not:"no", this:"esto", that:"eso",
+    what:"que", where:"donde", when:"cuando", how:"como", who:"quien",
+    very:"muy", big:"grande", small:"pequeno", new:"nuevo", old:"viejo",
+    happy:"feliz", sad:"triste", world:"mundo", life:"vida",
+    book:"libro", music:"musica", end:"fin"
+  },
+  "en-it": {
+    hello:"ciao", hi:"ciao", good:"buono", morning:"mattina", evening:"sera",
+    night:"notte", bye:"arrivederci", yes:"si", no:"no",
+    please:"per favore", thank:"grazie", thanks:"grazie", you:"lei",
+    welcome:"benvenuto", sorry:"scusa", help:"aiuto", love:"amore",
+    water:"acqua", food:"cibo", house:"casa", car:"macchina", dog:"cane",
+    cat:"gatto", day:"giorno", time:"tempo", man:"uomo", woman:"donna",
+    child:"bambino", friend:"amico", work:"lavoro", the:"il", a:"un",
+    is:"e", are:"sono", i:"io", we:"noi", they:"loro", and:"e",
+    not:"non", this:"questo", what:"cosa", where:"dove", when:"quando",
+    how:"come", why:"perche", who:"chi", very:"molto", big:"grande",
+    small:"piccolo", new:"nuovo", old:"vecchio", happy:"felice",
+    sad:"triste", world:"mondo", life:"vita", book:"libro",
+    music:"musica", end:"fine"
+  },
+  "en-ru": {
+    hello:"privet", hi:"privet", good:"khorosho", morning:"utro",
+    evening:"vecher", night:"noch", bye:"poka",
+    yes:"da", no:"net", please:"pozhaluysta", thank:"spasibo",
+    thanks:"spasibo", you:"vy", welcome:"dobro pozhalovat",
+    sorry:"izvinite", help:"pomoshch", love:"lyubov", water:"voda",
+    food:"yeda", house:"dom", car:"mashina", dog:"sobaka", cat:"koshka",
+    day:"den", time:"vremya", man:"muzhchina", woman:"zhenshchina",
+    child:"rebyonok", friend:"drug", work:"rabota",
+    i:"ya", we:"my", they:"oni", and:"i", or:"ili", not:"ne",
+    this:"eto", what:"chto", where:"gde", when:"kogda", how:"kak",
+    why:"pochemu", who:"kto", very:"ochen", big:"bolshoy", small:"malenkiy",
+    new:"novyy", old:"staryy", happy:"schastlivyy", sad:"grustnyy",
+    world:"mir", life:"zhizn", book:"kniga", music:"muzyka", end:"konets"
+  },
+  "en-hi": {
+    hello:"namaste", hi:"hai", good:"accha", morning:"subah",
+    evening:"sham", night:"raat", bye:"alvida",
+    yes:"haan", no:"nahi", please:"kripaya", thank:"dhanyavaad",
+    thanks:"shukriya", you:"aap", welcome:"swagat", sorry:"maaf karo",
+    help:"madad", love:"pyaar", water:"paani", food:"khaana",
+    house:"ghar", car:"gaadi", dog:"kutta", cat:"billi",
+    day:"din", time:"samay", man:"aadmi", woman:"aurat",
+    child:"bachcha", friend:"dost", work:"kaam", a:"ek",
+    is:"hai", are:"hain", i:"main", we:"hum", they:"ve",
+    and:"aur", or:"ya", not:"nahi", this:"yeh", that:"voh",
+    what:"kya", where:"kahan", when:"kab", how:"kaise", who:"kaun",
+    very:"bahut", big:"bada", small:"chhota", new:"naya", old:"purana",
+    happy:"khush", sad:"udaas", world:"duniya", life:"zindagi",
+    book:"kitaab", music:"sangeet", end:"ant"
+  },
+  "en-zh": {
+    hello:"ni hao", hi:"hai", good:"hao", morning:"zaoshang",
+    evening:"wanshang", night:"yewan", bye:"zaijian",
+    yes:"shi", no:"bu", please:"qing", thank:"xie xie", thanks:"xie xie",
+    you:"ni", welcome:"huanying", sorry:"duibuqi", help:"bangzhu",
+    love:"ai", water:"shui", food:"shiwu", house:"fangzi", car:"qiche",
+    dog:"gou", cat:"mao", day:"tian", time:"shijian",
+    friend:"pengyou", work:"gongzuo", a:"yi ge",
+    is:"shi", are:"shi", i:"wo", we:"women", they:"tamen",
+    and:"he", not:"bu", this:"zhe", that:"na", what:"shenme",
+    where:"nali", how:"zenme", why:"weishenme", who:"shui",
+    very:"hen", big:"da", small:"xiao", new:"xin", old:"jiu",
+    happy:"kuaile", sad:"beishang", world:"shijie", life:"shenghuo",
+    book:"shu", music:"yinyue", end:"jieshu"
+  },
+  "en-ar": {
+    hello:"marhaba", hi:"ahla", good:"jayyid", morning:"sabah",
+    evening:"masa", night:"layl", bye:"wadaean",
+    yes:"naam", no:"la", please:"min fadlak", thank:"shukran",
+    thanks:"shukran", you:"anta", welcome:"ahlan",
+    sorry:"aasif", help:"musaada", love:"hubb", water:"maa",
+    food:"taam", house:"bayt", car:"sayyara", dog:"kalb", cat:"qitta",
+    day:"yawm", time:"waqt", man:"rajul", woman:"imraa", child:"tifl",
+    friend:"sadiq", work:"amal", the:"al",
+    i:"ana", we:"nahnu", they:"hum", and:"wa", or:"aw", not:"la",
+    what:"matha", where:"ayna", when:"mata", how:"kayfa",
+    why:"limatha", who:"man", very:"jiddan", big:"kabir", small:"saghir",
+    new:"jadid", old:"qadim", happy:"saeid", sad:"hazin",
+    world:"alam", life:"hayat", end:"nihaya"
+  }
+};
 
-    const data = await res.json();
+// ── STATE ──────────────────────────────────────────────────────────────────
+var txHistory  = JSON.parse(localStorage.getItem("lx_history") || "[]");
+var debounce   = null;
+var lastOutput = "";
 
-    if (data.error) {
-      document.getElementById("output").innerText = "Error: " + data.error;
-      return;
-    }
+// ── DOM REFS ───────────────────────────────────────────────────────────────
+var srcLangSel   = document.getElementById("srcLang");
+var tgtLangSel   = document.getElementById("tgtLang");
+var srcText      = document.getElementById("srcText");
+var outputBox    = document.getElementById("output");
+var charCount    = document.getElementById("charCount");
+var outCount     = document.getElementById("outCount");
+var translateBtn = document.getElementById("translateBtn");
+var spinner      = document.getElementById("spinner");
+var btnText      = document.getElementById("btnText");
+var statBlock    = document.getElementById("statBlock");
+var statTime     = document.getElementById("statTime");
+var statModel    = document.getElementById("statModel");
+var errorBar     = document.getElementById("errorBar");
 
-    document.getElementById("output").innerText =
-      "🌐 " + data.translated +
-      "\n\n📝 English: " + data.english;
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function refreshLangUI() {
+  var src = LANG_META[srcLangSel.value];
+  var tgt = LANG_META[tgtLangSel.value];
+  document.getElementById("srcFlag").textContent = src ? src.flag : srcLangSel.value;
+  document.getElementById("srcName").textContent = src ? src.name : srcLangSel.value;
+  document.getElementById("tgtFlag").textContent = tgt ? tgt.flag : tgtLangSel.value;
+  document.getElementById("tgtName").textContent = tgt ? tgt.name : tgtLangSel.value;
+}
 
-  } catch (err) {
-    document.getElementById("output").innerText = "Error: " + err.message;
+function wordByWord(text, srcLang, tgtLang) {
+  var dict = DICT[srcLang + "-" + tgtLang];
+  if (!dict) return null;
+  return text.replace(/[a-zA-Z]+/g, function(w) {
+    var t = dict[w.toLowerCase()];
+    return t !== undefined ? t : w;
+  });
+}
+
+function showOutput(text) {
+  lastOutput = text;
+  var srcTextValue = srcText.value.trim();
+  outputBox.innerHTML = '<div style="margin-bottom: 16px;">' + text + '</div><div style="color: var(--muted); font-style: italic; border-top: 1px solid var(--border); padding-top: 8px;">' + srcTextValue + '</div>';
+  outputBox.className   = "output-box";
+  outCount.textContent  = text.length + " chars";
+}
+
+function showError(msg) {
+  errorBar.textContent = "Error: " + msg;
+  errorBar.className   = "error-bar show";
+}
+
+function setLoading(on) {
+  translateBtn.disabled = on;
+  spinner.style.display = on ? "block" : "none";
+  btnText.textContent   = on ? "Translating..." : "\u2736 Translate";
+  if (on) {
+    outputBox.innerHTML = '<div class="shimmer"><span></span><span></span><span></span></div>';
+    outputBox.className = "output-box";
+    errorBar.className  = "error-bar";
   }
 }
-</script>
 
+// ── CORE: TRANSLATE ────────────────────────────────────────────────────────
+async function runTranslate() {
+  var text    = srcText.value.trim();
+  var srcLang = srcLangSel.value;
+  var tgtLang = tgtLangSel.value;
+  if (!text) return;
+
+  setLoading(true);
+
+  try {
+    var translated, timeMs, modelName;
+
+    if (DEMO_MODE) {
+      // Simulate API delay
+      await new Promise(function(r) { setTimeout(r, 500 + Math.random() * 400); });
+      var result = wordByWord(text, srcLang, tgtLang);
+      translated = result !== null ? result
+                 : srcLang === tgtLang ? text
+                 : "(no demo dict for this pair — start Flask backend)";
+      timeMs     = Math.round(300 + Math.random() * 500);
+      modelName  = "opus-mt-" + srcLang + "-" + tgtLang;
+
+    } else {
+      var res  = await fetch(API_URL, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ text: text, src_lang: srcLang, tgt_lang: tgtLang })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Translation failed");
+      translated = data.translated;
+      timeMs     = data.time_ms;
+      modelName  = data.model.split("/").pop();
+    }
+
+    showOutput(translated);
+    statTime.textContent    = timeMs + "ms";
+    statModel.textContent   = modelName;
+    statBlock.style.display = "block";
+
+    // Save history
+    txHistory.unshift({ src: text, tgt: translated, srcLang: srcLang, tgtLang: tgtLang });
+    if (txHistory.length > 10) txHistory.pop();
+    localStorage.setItem("lx_history", JSON.stringify(txHistory));
+    renderHistory();
+
+  } catch(err) {
+    showError(err.message);
+  }
+
+  setLoading(false);
+}
+
+// ── HISTORY ────────────────────────────────────────────────────────────────
+function renderHistory() {
+  var sec  = document.getElementById("historySection");
+  var list = document.getElementById("historyList");
+  if (txHistory.length === 0) { sec.style.display = "none"; return; }
+  sec.style.display = "block";
+  list.innerHTML = "";
+  txHistory.slice(0, 5).forEach(function(h) {
+    var smeta = LANG_META[h.srcLang] || { name: h.srcLang };
+    var tmeta = LANG_META[h.tgtLang] || { name: h.tgtLang };
+    var div   = document.createElement("div");
+    div.className = "hist-item";
+    div.innerHTML =
+      '<div class="hist-langs">' + smeta.name + " &rarr; " + tmeta.name + "</div>" +
+      '<div class="hist-row">' +
+        '<div class="hist-src">' + h.src.slice(0, 70) + "</div>" +
+        '<div class="hist-tgt">' + h.tgt.slice(0, 70) + "</div>" +
+      "</div>";
+    div.addEventListener("click", function() {
+      srcText.value     = h.src;
+      srcLangSel.value  = h.srcLang;
+      tgtLangSel.value  = h.tgtLang;
+      refreshLangUI();
+      charCount.textContent = h.src.length + " / 500";
+      showOutput(h.tgt);
+    });
+    list.appendChild(div);
+  });
+}
+
+// ── EVENT LISTENERS ────────────────────────────────────────────────────────
+srcLangSel.addEventListener("change", refreshLangUI);
+tgtLangSel.addEventListener("change", refreshLangUI);
+
+document.getElementById("swapBtn").addEventListener("click", function() {
+  var tmp = srcLangSel.value;
+  srcLangSel.value = tgtLangSel.value;
+  tgtLangSel.value = tmp;
+  refreshLangUI();
+  if (lastOutput) {
+    srcText.value = lastOutput;
+    charCount.textContent = srcText.value.length + " / 500";
+    outputBox.textContent = "Translation appears here...";
+    outputBox.className   = "output-box placeholder";
+    outCount.textContent  = "-";
+    lastOutput = "";
+  }
+});
+
+srcText.addEventListener("input", function() {
+  charCount.textContent = srcText.value.length + " / 500";
+  clearTimeout(debounce);
+  if (srcText.value.trim().length > 2) {
+    debounce = setTimeout(runTranslate, 1200);
+  }
+});
+
+translateBtn.addEventListener("click", function() {
+  clearTimeout(debounce);
+  runTranslate();
+});
+
+srcText.addEventListener("keydown", function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    e.preventDefault();
+    clearTimeout(debounce);
+    runTranslate();
+  }
+});
+
+document.getElementById("clearBtn").addEventListener("click", function() {
+  srcText.value = "";
+  charCount.textContent = "0 / 500";
+  outputBox.textContent = "Translation appears here...";
+  outputBox.className   = "output-box placeholder";
+  outCount.textContent  = "-";
+  statBlock.style.display = "none";
+  errorBar.className    = "error-bar";
+  lastOutput = "";
+  clearTimeout(debounce);
+});
+
+document.getElementById("copySrcBtn").addEventListener("click", function() {
+  navigator.clipboard.writeText(srcText.value);
+});
+
+document.getElementById("copyOutBtn").addEventListener("click", function() {
+  if (lastOutput) navigator.clipboard.writeText(lastOutput);
+});
+
+document.getElementById("speakSrc").addEventListener("click", function() {
+  var utt = new SpeechSynthesisUtterance(srcText.value);
+  utt.lang = srcLangSel.value;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utt);
+});
+
+document.getElementById("speakOut").addEventListener("click", function() {
+  if (!lastOutput) return;
+  var utt = new SpeechSynthesisUtterance(lastOutput);
+  utt.lang = tgtLangSel.value;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utt);
+});
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+refreshLangUI();
+renderHistory();
+if (!DEMO_MODE) {
+  var badge = document.getElementById("modeBadge");
+  badge.textContent = "Connected to Flask backend";
+  badge.style.color = "var(--accent3)";
+  badge.style.borderColor = "rgba(108,252,202,0.35)";
+}
+</script>
 </body>
 </html>
